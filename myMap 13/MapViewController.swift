@@ -101,7 +101,7 @@ class MapViewController: UIViewController, CLLocationManagerDelegate, MKMapViewD
         }
     }
     
-//    функция наложения отрисованных треков на карту
+//    функция наложения отрисованных треков на карте
     func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
         print("mapView start")
         let polylineRenderer = MKPolylineRenderer(polyline: overlay as! MKPolyline)

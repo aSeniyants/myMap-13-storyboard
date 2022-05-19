@@ -95,7 +95,7 @@ extension TracksViewController: UITableViewDataSource {
 //  и таблица со списком геопозиции
 //
 //  Если в базе данных будет одна таблица, то придется координаты типа CLLocationCoordinate2D
-//  переформативаровать в String, а потом обратно.
+//  переформативаровать в String, а потом обратно
 class locationList: Object {
     @objc dynamic var latitude = 0.0
     @objc dynamic var longitude = 0.0
