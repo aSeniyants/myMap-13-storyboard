@@ -19,6 +19,7 @@
                         <color key="backgroundColor" systemColor="systemGray5Color"/>
                     </view>
                     <tabBarItem key="tabBarItem" title="Debug" image="pencil" catalog="system" id="A13-Gc-xHI"/>
+                    <navigationItem key="navigationItem" id="CNx-n9-COh"/>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="ptg-iP-Jfu" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>
             </objects>
@@ -64,6 +65,9 @@
                                         <buttonConfiguration key="configuration" style="plain" title="minus">
                                             <backgroundConfiguration key="background"/>
                                         </buttonConfiguration>
+                                        <connections>
+                                            <action selector="minusButtun:" destination="ey6-4i-Rpy" eventType="touchUpInside" id="WYA-Mf-AbV"/>
+                                        </connections>
                                     </button>
                                     <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="g51-Pc-jhQ">
                                         <rect key="frame" x="310.5" y="0.0" width="103.5" height="50"/>
@@ -96,6 +100,7 @@
                         </constraints>
                     </view>
                     <tabBarItem key="tabBarItem" title="Map" image="map" catalog="system" id="iX6-zu-Q2f"/>
+                    <navigationItem key="navigationItem" id="AOY-fl-Hcg"/>
                     <connections>
                         <outlet property="mapView" destination="deR-Js-NfI" id="Cg7-Ks-AyY"/>
                     </connections>
@@ -149,6 +154,7 @@
                         </constraints>
                     </view>
                     <tabBarItem key="tabBarItem" title="Tracks" image="tablecells" catalog="system" id="c2K-jn-3TE"/>
+                    <navigationItem key="navigationItem" id="h7w-Vn-DNK"/>
                     <connections>
                         <outlet property="tableView" destination="mjZ-6c-dDi" id="5tp-US-5IX"/>
                     </connections>

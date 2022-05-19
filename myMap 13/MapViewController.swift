@@ -2,27 +2,42 @@ import UIKit
 import MapKit
 import RealmSwift
 
+//протокол для работы делегата
+protocol MapDrawDelegate: AnyObject {
+    func drawTrackOnMap(switcherNum: Int)
+    func removeTrackOnMap(switcherNum: Int)
+}
 
-class MapViewController: UIViewController, CLLocationManagerDelegate {
+
+class MapViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDelegate, MapDrawDelegate {
     
-    let now = Date()
-    
-    //    создаем аутлет зачем от
+
+    //    создаем аутлеты
     @IBOutlet weak var mapView: MKMapView!
     @IBOutlet weak var compasButtun: MKCompassButton!
     
-//    создаем его для работы с позицией
+//  константа для работы со временем и датой
+    let now = Date()
+//  для работы геопозици
     let locationManager = CLLocationManager()
 //    переменная, которая говорит нажата кнопка REC или нет
     var recMode = false
 //    массив для хранения местоположения прия записи трека
-    var geoLocationArray: [String] = []
-    
+    var geoLocationArray: [CLLocationCoordinate2D] = []
+
+//  создает объект Realm
     let realm = try! Realm()
     
     override func viewDidLoad() {
         super.viewDidLoad()
         print("запускается мэп")
+        
+//      определяем с какого контроллера пойдет команда делегата
+        let destination = tabBarController?.viewControllers![2] as? TracksViewController
+        destination?.delegate = self
+        
+        mapView.delegate = self
+        
     }
 
 //    когда экран с картами загрузился, проверяем включена ли геолокация
@@ -52,12 +67,13 @@ class MapViewController: UIViewController, CLLocationManagerDelegate {
         }
     }
 
-//    хз зачем она нужна...
+//    запускаем определение геопозиции
     func setupManager(){
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
     }
-    
+
+//  функция, которая дает дату в виде строки (для записи в название трека)
     func getDate() -> String {
         let formatter = DateFormatter()
         formatter.timeZone = TimeZone.current
@@ -67,7 +83,7 @@ class MapViewController: UIViewController, CLLocationManagerDelegate {
         return trackTime
     }
     
-//    создаем функцию определения местоположения
+//    функция для определения доступности геопозиции
     func chekAuthorization(){
         switch CLLocationManager.authorizationStatus() {
         case .authorizedAlways:
@@ -84,7 +100,17 @@ class MapViewController: UIViewController, CLLocationManagerDelegate {
             locationManager.requestWhenInUseAuthorization()
         }
     }
-
+    
+//    функция наложения отрисованных треков на карту
+    func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+        print("mapView start")
+        let polylineRenderer = MKPolylineRenderer(polyline: overlay as! MKPolyline)
+        polylineRenderer.strokeColor = UIColor.red
+        polylineRenderer.lineWidth = 3.0
+        return polylineRenderer
+      }
+    
+//    кнопка переноса экрана к геопозиции пользователя
     @IBAction func myLocationCenterButton(_ sender: UIButton) {
         if let myLocation = locationManager.location?.coordinate{
             let region = MKCoordinateRegion(center: myLocation, latitudinalMeters: 1000, longitudinalMeters: 1000)
@@ -94,49 +120,98 @@ class MapViewController: UIViewController, CLLocationManagerDelegate {
         }else{
             print("позиция не обнаружена")
         }
-        
-
     }
     
 
     @IBAction func plusButton(_ sender: UIButton) {
-        
-        if geoLocationArray.count > 0{
-            print(geoLocationArray)
-        }
-        getDate()
+//        в данный момент не востребована
     }
+    
+    @IBAction func minusButtun(_ sender: UIButton) {
+//        в данный момент не востребована
+    }
+    
+//    кнопка записи REC
     @IBAction func recButton(_ sender: UIButton) {
-        print("REC START")
         print("REC = \(recMode)")
+//        если запись трека ранее была выключена - просто включаем ее
         if recMode == false{
             recMode = true
             print("change REC = true")
+//        если была включена, то массив с геопозицией записываем в базу данных, переменную меняем на False и обнуляем массив с геопозицией.
         }else{
             recMode = false
             print("change REC = false")
-            let track = trackListData()
-            track.dateTrack = getDate()
-            track.trackPoint.append(objectsIn: geoLocationArray)
+            let locationListTable = realm.objects(locationList.self)
+//        здесь мы сохраняем в переменные индексы геолокаций, которые записаны в базу, для последующей их записи в tracklist
+            let firstIndexLocationList = locationListTable.count
+            let lastIndexLocationList = locationListTable.count + geoLocationArray.count - 1
+            print(locationListTable.count, geoLocationArray.count, firstIndexLocationList, lastIndexLocationList)
+//        записываем массив с геопозицией в базу данныъ
+            for elem in geoLocationArray{
+                let writeCoordinates = locationList()
+                realm.beginWrite()
+                writeCoordinates.longitude = elem.longitude
+                writeCoordinates.latitude = elem.latitude
+                realm.add(writeCoordinates)
+                try! realm.commitWrite()
+                print("coordinates write in locationList")
+            }
+            print(locationListTable.count)
+            let writeCoordinatesArray = trackList()
             realm.beginWrite()
-            realm.add(track)
+//         записываем название трека в виде даты
+            writeCoordinatesArray.nameTrack = getDate()
+            writeCoordinatesArray.coordinates.append(objectsIn: locationListTable[firstIndexLocationList...lastIndexLocationList])
+            realm.add(writeCoordinatesArray)
             try! realm.commitWrite()
-            print("Track записан")
+            print("Track записан!")
+//         обнуляем массив с геолокацией
             geoLocationArray = []
+        }
+    }
+    
+//  функция, которая запускается через делегат для отрисовки трека при его активации в таблице треков
+    func drawTrackOnMap(switcherNum: Int) {
+        print("Delegate start")
+        print("CellSwitcher N: \(switcherNum)")
+        let trackListTable = realm.objects(trackList.self)
+        var addTrackArray: [CLLocationCoordinate2D] = []
+//      трек считывается из базы и сохраняется в массив
+        for elem in trackListTable[switcherNum].coordinates{
+            addTrackArray.append(elem.coordinate)
+        }
+        print(addTrackArray.count)
+//      массив передается в метод отрисовки трека
+        let polyline: MKPolyline = MKPolyline(coordinates: addTrackArray, count: addTrackArray.count)
+//      для того чтобы в последующем можно было этот трек удалить, в его subtitle добавляется номер строки
+        polyline.subtitle = String(switcherNum)
+        mapView.addOverlay(polyline)
+        print("Track draw")
+    }
+    
+//    функция удаления трека работает несколько необычно...
+//    при выключении переключателя в таблице, в функцию передается номер строки
+//    который сравнивается с subtitle и при совпадении трек удаляется
+    func removeTrackOnMap(switcherNum: Int) {
+        for overlay in mapView.overlays{
+            if overlay.subtitle == String(switcherNum){
+                mapView.removeOverlay(overlay)
+                print("remove track")
+            }
         }
     }
 }
 
+//расширения для функции определения геопозиции
 extension MapViewController {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         let location = locations.last?.coordinate
+//        при активации режима REC геолокация сохраняется в массив
         if recMode == true{
             print(geoLocationArray.count)
             if location != nil {
-                let a = String(location?.longitude ?? 0.0)
-                let b = String(location?.latitude ?? 0.0)
-                let c = "longtitude: " + a + ", latitude: " + b
-                geoLocationArray.append(c)
+                geoLocationArray.append(location!)
             }
         }
     }
